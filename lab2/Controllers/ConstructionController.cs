@@ -1,7 +1,10 @@
-﻿using lab2.Models;
+﻿using BLL.Models;
+using DAL.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using System.Reflection.Metadata;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -74,28 +77,39 @@ namespace lab2.Controllers
         }
 
         // POST: api/Blogs
+        [HttpPost("{id}/ChangeStock")]
+        public async Task<ActionResult> ChangeStock(int id, [FromBody] int newValue)
+        {
+            var constr = _context.Construction.Where(i => i.Id == id).FirstOrDefault();
+            constr.InStock = newValue;
+            _context.Construction.Update(constr);
+            _context.SaveChanges();
+            return CreatedAtAction("GetConstruction", new { id = constr.Id }, constr);
+        }
+
         [HttpPost]
-        public async Task<ActionResult<Construction>> PostConstruction(ConstrDTO constr)
+        public async Task<ActionResult<Construction>> PostConstruction(ConstructionModel constr)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            Color col = _context.Color.Find(constr.id_colour);
+            Color col = _context.Color.Find(constr.Id_colour);
+           int id = _context.Construction.OrderByDescending(i => i.Id).FirstOrDefault().Id+1;
             var c = new Construction
             {
-                Id = constr.Id,
+                Id = id,
                 Name = constr.Name,
-                Id_model = constr.id_model,
-                Id_colour = constr.id_colour,
+                Id_model = constr.Id_model,
+                Id_colour = constr.Id_colour,
                 HorsePower = constr.HorsePower,
                 EngineCapacity = constr.EngineCapacity,
                 EngineType = constr.EngineType,
                 Drive = constr.Drive,
                 Transmission = constr.Transmission,
                 InStock = constr.InStock,
-                AutoModel = _context.AutoModel.Find(constr.id_model),
-                Color = _context.Color.Find(constr.id_colour),
+                AutoModel = _context.AutoModel.Find(constr.Id_model),
+                Color = _context.Color.Find(constr.Id_colour),
                 Products = new List<Product>(),
             };
             _context.Construction.Add(c);
@@ -106,6 +120,7 @@ namespace lab2.Controllers
 
         // DELETE: api/Blogs/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> DeleteConstruction(int id)
         {
             var construction = await _context.Construction.FindAsync(id);

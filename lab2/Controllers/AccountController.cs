@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using lab2.Models;
+using DAL.Entities;
+using BLL.Interface;
+using BLL.Models;
+using BLL;
 
 namespace ASPNetCoreApp.Controllers
 {
@@ -10,11 +13,13 @@ namespace ASPNetCoreApp.Controllers
     {
         private readonly UserManager<User> _userManager;
         private readonly SignInManager<User> _signInManager;
+        private readonly IAdministration administration;
 
-        public AccountController(UserManager<User> userManager, SignInManager<User> signInManager)
+        public AccountController(UserManager<User> userManager, SignInManager<User> signInManager, IAdministration administration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            this.administration = administration;
         }
 
         [HttpPost]
@@ -24,14 +29,26 @@ namespace ASPNetCoreApp.Controllers
         {
             if (ModelState.IsValid)
             {
-                User user = new() {Email = model.Email, UserName = model.Email };
+                AdministrationModel a = new AdministrationModel
+                {
+                    Date = model.Date,
+                    FullName = model.Name,
+                    Experience = model.Experience
+                };
+                int id = administration.CreateAdministration(a);
+                a.Id = id;
+
+                User user = new() {UserId = id, Email = model.Email, UserName = model.Email };
                 // Добавление нового пользователя
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
+                    // Установка роли User
+                    await _userManager.AddToRoleAsync(user, "user");
                     // Установка куки
                     await _signInManager.SignInAsync(user, false);
-                    return Ok(new { message = "Добавлен новый пользователь: " + user.UserName });
+                   
+                    return Ok(new { message = "Добавлен новый пользователь: " + user.UserName, administration = a });
                 }
                 else
                 {
@@ -69,7 +86,12 @@ namespace ASPNetCoreApp.Controllers
                     await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, false);
                 if (result.Succeeded)
                 {
-                    return Ok(new { message = "Выполнен вход", userName = model.Email });
+
+                    var user = await _userManager.FindByEmailAsync(model.Email);
+                    IList<string>? roles = await _userManager.GetRolesAsync(user);
+                    string? userRole = roles.FirstOrDefault();
+                        return Ok(new { message = "Выполнен вход", userName = model.Email, userRole });
+
                 }
                 else
                 {
@@ -116,7 +138,10 @@ namespace ASPNetCoreApp.Controllers
             {
                 return Unauthorized(new { message = "Вы Гость. Пожалуйста, выполните вход" });
             }
-            return Ok(new { message = "Сессия активна", userName = usr.UserName });
+            IList<string> roles = await _userManager.GetRolesAsync(usr);
+            string? userRole = roles.FirstOrDefault();
+            return Ok(new { message = "Сессия активна", userName = usr.UserName, userRole, administration = administration });
+
 
         }
         private Task<User> GetCurrentUserAsync() => _userManager.GetUserAsync(HttpContext.User);

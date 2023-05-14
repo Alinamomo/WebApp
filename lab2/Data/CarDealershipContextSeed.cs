@@ -1,4 +1,4 @@
-﻿using lab2.Models;
+﻿using DAL.Entities;
 
 namespace lab2.Data
 {
@@ -10,6 +10,27 @@ namespace lab2.Data
             {
                 context.Database.EnsureCreated();
 
+                Color col = new Color{ Name = "Red" };
+                context.Color.Add(col);
+
+                if (context.ModelRange.Any())
+                {
+                    return;
+                }
+
+                var ranges = new ModelRange[]
+                {
+                new ModelRange{Name="RS Model"},
+                new ModelRange{Name = "S Model"},
+                new ModelRange{Name="Q Model"}
+
+                };
+                foreach (ModelRange m in ranges)
+                {
+                    context.ModelRange.Add(m);
+                }
+                await context.SaveChangesAsync();
+
                 if (context.AutoModel.Any())
                 {
                     return;
@@ -17,12 +38,12 @@ namespace lab2.Data
 
                 var models = new AutoModel[]
                 {
-                new AutoModel{Name="RSQ5"},
-                new AutoModel{Name = "A5"},
-                new AutoModel{Name="Q8"}
+                new AutoModel{Name="RSQ5", Id_modelrange=1},
+                new AutoModel{Name = "A5", Id_modelrange = 1},
+                new AutoModel{Name="Q8", Id_modelrange = 2}
 
                 };
-                foreach (AutoModel m in models)
+            foreach (AutoModel m in models)
                 {
                     context.AutoModel.Add(m);
                 }
@@ -30,12 +51,23 @@ namespace lab2.Data
 
                 var constructions = new Construction[]
                 {
-                new Construction { Id=25,Name = "Sport",HorsePower = 249, EngineCapacity = 3, EngineType ="Дизель", Drive ="Полный"},
-                new Construction { Id=26,Name = "Ex",HorsePower = 249, EngineCapacity = 3, EngineType ="Дизель", Drive ="Полный" }
+                new Construction { Name = "Sport",HorsePower = 249, Transmission="asd", EngineCapacity = 3, EngineType ="Дизель", Drive ="Полный", Id_model = 1, Id_colour = 1},
+                new Construction { Name = "Ex",HorsePower = 249, Transmission="asd", EngineCapacity = 3, EngineType ="Дизель", Drive ="Полный" , Id_model = 2, Id_colour = 1}
                 };
                 foreach (Construction c in constructions)
                 {
                     context.Construction.Add(c);
+                }
+                await context.SaveChangesAsync();
+
+            var products = new Product[]
+             {
+                new Product { Name="Automobile", Id_constr = 1, Price=100000 },
+                new Product { Name="Automobile2", Id_constr = 2, Price=100100 },
+             };
+                foreach (Product c in products)
+                {
+                    context.Product.Add(c);
                 }
                 await context.SaveChangesAsync();
 
